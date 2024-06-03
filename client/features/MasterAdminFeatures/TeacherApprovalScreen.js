@@ -94,27 +94,22 @@ const ApprovalCard = ({
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.button, { backgroundColor: "#6490E8" }]}
-              onPress={onView}
+              onPress={() => {
+                onView();
+                navigation.navigate("CandidateDetailsViewScreen", {
+                  name,
+                  school,
+                  department,
+                  registerNumber,
+                  phoneNumber,
+                  email,
+                  rollNumber,
+                  imageUrl,
+                  status,
+                });
+              }}
             >
-              <Text
-                onPress={() => {
-                  onView();
-                  navigation.navigate("CandidateDetailsViewScreen", {
-                    name,
-                    school,
-                    department,
-                    registerNumber,
-                    phoneNumber,
-                    email,
-                    rollNumber,
-                    imageUrl,
-                    status,
-                  });
-                }}
-                style={styles.buttonText}
-              >
-                View
-              </Text>
+              <Text style={styles.buttonText}>View</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.button, { backgroundColor: "red" }]}
@@ -139,37 +134,76 @@ const ApprovalCard = ({
             </TouchableOpacity>
           </>
         )}
-        {(status === "Approved" || status === "Rejected") && (
+        {status === "Approved" && (
           <>
             <TouchableOpacity
               style={[styles.button, { backgroundColor: "#6490E8" }]}
-              onPress={onView}
+              onPress={() => {
+                onView();
+                navigation.navigate("CandidateDetailsViewScreen", {
+                  name,
+                  school,
+                  department,
+                  registerNumber,
+                  phoneNumber,
+                  email,
+                  rollNumber,
+                  imageUrl,
+                  status,
+                });
+              }}
             >
-              <Text
-                onPress={() => {
-                  onView();
-                  navigation.navigate("CandidateDetailsViewScreen", {
-                    name,
-                    school,
-                    department,
-                    registerNumber,
-                    phoneNumber,
-                    email,
-                    rollNumber,
-                    imageUrl,
-                    status,
-                  });
-                }}
-                style={styles.buttonText}
-              >
-                View
-              </Text>
+              <Text style={styles.buttonText}>View</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.button, { backgroundColor: "red" }]}
               onPress={onDelete}
             >
               <Text style={styles.buttonText}>Delete</Text>
+            </TouchableOpacity>
+          </>
+        )}
+        {status === "Rejected" && (
+          <>
+            <TouchableOpacity
+              style={[styles.button, { backgroundColor: "green" }]}
+              onPress={() => {
+                Alert.alert(
+                  "Confirm Approval",
+                  "Are you sure you want to approve?",
+                  [
+                    {
+                      text: "No",
+                      style: "cancel",
+                    },
+                    {
+                      text: "Yes",
+                      onPress: onApprove,
+                    },
+                  ]
+                );
+              }}
+            >
+              <Text style={styles.buttonText}>Approve</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.button, { backgroundColor: "#6490E8" }]}
+              onPress={() => {
+                onView();
+                navigation.navigate("CandidateDetailsViewScreen", {
+                  name,
+                  school,
+                  department,
+                  registerNumber,
+                  phoneNumber,
+                  email,
+                  rollNumber,
+                  imageUrl,
+                  status,
+                });
+              }}
+            >
+              <Text style={styles.buttonText}>View</Text>
             </TouchableOpacity>
           </>
         )}
@@ -452,7 +486,7 @@ const RejectedApproval = () => {
           teacherDoc.id,
           "auth"
         );
-        const q = query(authCollection, where("isApproved", "==", false));
+        const q = query(authCollection, where("isRejected", "==", true));
         const querySnapshot = await getDocs(q);
 
         querySnapshot.forEach((doc) => {

@@ -39,7 +39,6 @@ const ApprovalCard = ({
   onView,
   onReject,
   onDelete,
-  userType,
 }) => {
   const getStatusColor = (status) => {
     switch (status) {
@@ -61,7 +60,6 @@ const ApprovalCard = ({
       {department && (
         <Text style={styles.cardText}>Department: {department}</Text>
       )}
-      {department && <Text style={styles.cardText}>User-Type: {userType}</Text>}
       <Text
         style={[
           styles.cardStatus,
@@ -136,7 +134,7 @@ const ApprovalCard = ({
             </TouchableOpacity>
           </>
         )}
-        {(status === "Approved" || status === "Rejected") && (
+        {status === "Approved" && (
           <>
             <TouchableOpacity
               style={[styles.button, { backgroundColor: "#6490E8" }]}
@@ -165,6 +163,50 @@ const ApprovalCard = ({
             </TouchableOpacity>
           </>
         )}
+        {status === "Rejected" && (
+          <>
+            <TouchableOpacity
+              style={[styles.button, { backgroundColor: "green" }]}
+              onPress={() => {
+                Alert.alert(
+                  "Confirm Approval",
+                  "Are you sure you want to approve?",
+                  [
+                    {
+                      text: "No",
+                      style: "cancel",
+                    },
+                    {
+                      text: "Yes",
+                      onPress: onApprove,
+                    },
+                  ]
+                );
+              }}
+            >
+              <Text style={styles.buttonText}>Approve</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.button, { backgroundColor: "#6490E8" }]}
+              onPress={() => {
+                onView();
+                navigation.navigate("CandidateDetailsViewScreen", {
+                  name,
+                  school,
+                  department,
+                  registerNumber,
+                  phoneNumber,
+                  email,
+                  rollNumber,
+                  imageUrl,
+                  status,
+                });
+              }}
+            >
+              <Text style={styles.buttonText}>View</Text>
+            </TouchableOpacity>
+          </>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -180,16 +222,20 @@ const PendingApproval = () => {
     try {
       const userTypes = ["Admins", "Students", "Teachers"];
       const fetchedUsers = [];
-  
+
       for (const userType of userTypes) {
         const userCollection = collection(db, userType);
         const userDocs = await getDocs(userCollection);
-  
+
         for (const userDoc of userDocs.docs) {
           const authCollection = collection(db, userType, userDoc.id, "auth");
-          const q = query(authCollection, where("isApproved", "==", false), where("isRejected", "!=", true));
+          const q = query(
+            authCollection,
+            where("isApproved", "==", false),
+            where("isRejected", "!=", true)
+          );
           const querySnapshot = await getDocs(q);
-  
+
           querySnapshot.forEach((doc) => {
             const data = doc.data();
             fetchedUsers.push({
@@ -201,7 +247,7 @@ const PendingApproval = () => {
           });
         }
       }
-  
+
       setAdmins(fetchedUsers);
       setOriginalAdmins(fetchedUsers); // Save the original list
       setLoading(false); // Set loading to false once data is fetched
@@ -243,10 +289,10 @@ const PendingApproval = () => {
 
   const handleReject = async (userType, userId, authId) => {
     const authDocRef = doc(db, `${userType}s`, userId, "auth", authId);
-  
+
     await updateDoc(authDocRef, { isApproved: false, isRejected: true });
     Alert.alert("Rejected successfully");
-  
+
     setAdmins(admins.filter((admin) => admin.id !== userId));
     setOriginalAdmins(originalAdmins.filter((admin) => admin.id !== userId)); // Update the original list
   };
@@ -435,6 +481,7 @@ const RejectedApproval = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+
   const fetchRejectedAdmins = async () => {
     try {
       const userTypes = ["Admins", "Students", "Teachers"];
@@ -446,7 +493,7 @@ const RejectedApproval = () => {
 
         for (const userDoc of userDocs.docs) {
           const authCollection = collection(db, userType, userDoc.id, "auth");
-          const q = query(authCollection, where("isApproved", "==", false));
+          const q = query(authCollection, where("isRejected", "==", true));
           const querySnapshot = await getDocs(q);
 
           querySnapshot.forEach((doc) => {
@@ -543,7 +590,7 @@ const RejectedApproval = () => {
             userType={item?.userType}
             email={item?.email}
             imageUrl={item?.imageUrl}
-            status={item?.isApproved === false ? "Pending" : "Approved"}
+            status={item?.isRejected === true ? "Rejected" : "Approved"}
             onApprove={() => handleApprove(item.userType, item.id, item.authId)}
             onView={() => handleView(item.id)}
             onDelete={() => handleDelete(item.id)}

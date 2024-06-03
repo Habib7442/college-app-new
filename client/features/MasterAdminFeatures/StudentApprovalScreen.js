@@ -94,27 +94,22 @@ const ApprovalCard = ({
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.button, { backgroundColor: "#6490E8" }]}
-              onPress={onView}
+              onPress={() => {
+                onView();
+                navigation.navigate("CandidateDetailsViewScreen", {
+                  name,
+                  school,
+                  department,
+                  registerNumber,
+                  phoneNumber,
+                  email,
+                  rollNumber,
+                  imageUrl,
+                  status,
+                });
+              }}
             >
-              <Text
-                onPress={() => {
-                  onView();
-                  navigation.navigate("CandidateDetailsViewScreen", {
-                    name,
-                    school,
-                    department,
-                    registerNumber,
-                    phoneNumber,
-                    email,
-                    rollNumber,
-                    imageUrl,
-                    status,
-                  });
-                }}
-                style={styles.buttonText}
-              >
-                View
-              </Text>
+              <Text style={styles.buttonText}>View</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.button, { backgroundColor: "red" }]}
@@ -139,37 +134,76 @@ const ApprovalCard = ({
             </TouchableOpacity>
           </>
         )}
-        {(status === "Approved" || status === "Rejected") && (
+        {status === "Approved" && (
           <>
             <TouchableOpacity
               style={[styles.button, { backgroundColor: "#6490E8" }]}
-              onPress={onView}
+              onPress={() => {
+                onView();
+                navigation.navigate("CandidateDetailsViewScreen", {
+                  name,
+                  school,
+                  department,
+                  registerNumber,
+                  phoneNumber,
+                  email,
+                  rollNumber,
+                  imageUrl,
+                  status,
+                });
+              }}
             >
-              <Text
-                onPress={() => {
-                  onView();
-                  navigation.navigate("CandidateDetailsViewScreen", {
-                    name,
-                    school,
-                    department,
-                    registerNumber,
-                    phoneNumber,
-                    email,
-                    rollNumber,
-                    imageUrl,
-                    status,
-                  });
-                }}
-                style={styles.buttonText}
-              >
-                View
-              </Text>
+              <Text style={styles.buttonText}>View</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.button, { backgroundColor: "red" }]}
               onPress={onDelete}
             >
               <Text style={styles.buttonText}>Delete</Text>
+            </TouchableOpacity>
+          </>
+        )}
+        {status === "Rejected" && (
+          <>
+            <TouchableOpacity
+              style={[styles.button, { backgroundColor: "green" }]}
+              onPress={() => {
+                Alert.alert(
+                  "Confirm Approval",
+                  "Are you sure you want to approve?",
+                  [
+                    {
+                      text: "No",
+                      style: "cancel",
+                    },
+                    {
+                      text: "Yes",
+                      onPress: onApprove,
+                    },
+                  ]
+                );
+              }}
+            >
+              <Text style={styles.buttonText}>Approve</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.button, { backgroundColor: "#6490E8" }]}
+              onPress={() => {
+                onView();
+                navigation.navigate("CandidateDetailsViewScreen", {
+                  name,
+                  school,
+                  department,
+                  registerNumber,
+                  phoneNumber,
+                  email,
+                  rollNumber,
+                  imageUrl,
+                  status,
+                });
+              }}
+            >
+              <Text style={styles.buttonText}>View</Text>
             </TouchableOpacity>
           </>
         )}
@@ -421,10 +455,12 @@ const AcceptedApproval = () => {
 };
 
 const RejectedApproval = () => {
-  const [students, setStudents] = useState([]);
+  const [rejectedStudents, setRejectedStudents] = useState([]);
   const [originalStudents, setOriginalStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  console.log(rejectedStudents, "students")
 
   const fetchRejectedtudents = async () => {
     try {
@@ -440,7 +476,7 @@ const RejectedApproval = () => {
           studentDoc.id,
           "auth"
         );
-        const q = query(authCollection, where("isApproved", "==", false));
+        const q = query(authCollection, where("isRejected", "==", true));
         const querySnapshot = await getDocs(q);
 
         querySnapshot.forEach((doc) => {
@@ -453,7 +489,7 @@ const RejectedApproval = () => {
         });
       }
 
-      setStudents(fetchedStudents);
+      setRejectedStudents(fetchedStudents);
       setOriginalStudents(fetchedStudents); // Save the original list
       setLoading(false); // Set loading to false once data is fetched
     } catch (error) {
@@ -465,7 +501,7 @@ const RejectedApproval = () => {
   };
   useEffect(() => {
     fetchRejectedtudents();
-  }, []);
+  }, [rejectedStudents]);
 
   const onRefresh = async () => {
     try {
@@ -524,7 +560,7 @@ const RejectedApproval = () => {
             phoneNumber={item?.phoneNumber}
             email={item?.email}
             imageUrl={item?.imageUrl}
-            status={item?.isApproved === false ? "Pending" : "Approved"}
+            status={item?.isRejected === true ? "Rejected" : "Approved"}
             onView={() => handleView(item.id)}
             onDelete={() => handleDelete(item.id)}
           />

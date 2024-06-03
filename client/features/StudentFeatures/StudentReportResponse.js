@@ -6,7 +6,6 @@ import {
   ScrollView,
   Modal,
   Button,
-  TextInput,
   Alert,
 } from "react-native";
 import { db } from "../../../lib/firebase";
@@ -16,31 +15,12 @@ import {
   serverTimestamp,
   getDocs,
   query,
-  where,
   orderBy,
 } from "firebase/firestore";
+import { Timestamp } from "firebase/firestore";
 
 const StudentReportResponse = () => {
-  const [reports, setReports] = useState([
-    {
-      id: 1,
-      reportType: "Report Type 1",
-      description: "Description for Report 1",
-      senderType: "Sender Type 1",
-      submissionDate: new Date(),
-      reply: "Reply for Report 1",
-      replyDate: new Date(),
-    },
-    {
-      id: 2,
-      reportType: "Report Type 2",
-      description: "Description for Report 2",
-      senderType: "Sender Type 2",
-      submissionDate: new Date(),
-      reply: "Reply for Report 2",
-      replyDate: new Date(),
-    },
-  ]);
+  const [reports, setReports] = useState([]);
   const [replyModalVisible, setReplyModalVisible] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
   const [reply, setReply] = useState("");
@@ -54,18 +34,21 @@ const StudentReportResponse = () => {
       const reportCollection = collection(db, "Admins");
       const reportsSnapshot = await getDocs(reportCollection);
       const reportsData = [];
-      reportsSnapshot.forEach((doc) => {
+
+      for (const doc of reportsSnapshot.docs) {
         const reportsRef = collection(db, "Admins", doc.id, "reports");
-        const reportsQuery = query(
-          reportsRef,
-          orderBy("submissionDate", "desc")
-        );
-        const reportsDocs = getDocs(reportsQuery);
-        reportsDocs.forEach((reportDoc) => {
+        const reportsQuery = query(reportsRef, orderBy("submissionDate", "desc"));
+        const reportsDocsSnapshot = await getDocs(reportsQuery);
+
+        reportsDocsSnapshot.forEach((reportDoc) => {
           const data = reportDoc.data();
-          reportsData.push({ id: reportDoc.id, ...data });
+          // Convert Firestore Timestamps to JavaScript Date objects
+          const submissionDate = data.submissionDate.toDate();
+          const replyDate = data.replyDate ? data.replyDate.toDate() : null;
+          reportsData.push({ id: reportDoc.id, adminUID: doc.id, ...data, submissionDate, replyDate });
         });
-      });
+      }
+      
       setReports(reportsData);
     } catch (error) {
       console.error("Error fetching reports:", error);
@@ -105,10 +88,12 @@ const StudentReportResponse = () => {
     setSelectedReport(report);
     setReplyModalVisible(true);
   };
+
   const closeReplyModal = () => {
     setSelectedReport(null);
     setReplyModalVisible(false);
   };
+
   return (
     <View style={styles.container}>
       <ScrollView>
@@ -125,7 +110,7 @@ const StudentReportResponse = () => {
                 <Text style={styles.replyTitle}>Reply:</Text>
                 <Text style={styles.reply}>{report.reply}</Text>
                 <Text style={styles.replyDate}>
-                  Reply received on: {report.replyDate.toDateString()}
+                  Reply received on: {report.replyDate?.toDateString()}
                 </Text>
               </View>
             )}
@@ -142,7 +127,7 @@ const StudentReportResponse = () => {
                   <Text style={styles.replyTitle}>Reply:</Text>
                   <Text style={styles.reply}>{selectedReport.reply}</Text>
                   <Text style={styles.replyDate}>
-                    Reply received on: {selectedReport.replyDate.toDateString()}
+                    Reply received on: {selectedReport.replyDate?.toDateString()}
                   </Text>
                 </View>
               )}

@@ -19,28 +19,10 @@ import {
   where,
   orderBy,
 } from "firebase/firestore";
+import { Timestamp } from "firebase/firestore";
 
 const AdminReportViewScreen = () => {
-  const [reports, setReports] = useState([
-    {
-      id: 1,
-      reportType: "Report Type 1",
-      description: "Description for Report 1",
-      senderType: "Sender Type 1",
-      submissionDate: new Date(),
-      reply: "Reply for Report 1",
-      replyDate: new Date(),
-    },
-    {
-      id: 2,
-      reportType: "Report Type 2",
-      description: "Description for Report 2",
-      senderType: "Sender Type 2",
-      submissionDate: new Date(),
-      reply: "Reply for Report 2",
-      replyDate: new Date(),
-    },
-  ]);
+  const [reports, setReports] = useState([]);
   const [replyModalVisible, setReplyModalVisible] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
   const [reply, setReply] = useState("");
@@ -53,19 +35,24 @@ const AdminReportViewScreen = () => {
     try {
       const reportCollection = collection(db, "Admins");
       const reportsSnapshot = await getDocs(reportCollection);
+
       const reportsData = [];
-      reportsSnapshot.forEach((doc) => {
+      for (const doc of reportsSnapshot.docs) {
         const reportsRef = collection(db, "Admins", doc.id, "reports");
-        const reportsQuery = query(
-          reportsRef,
-          orderBy("submissionDate", "desc")
-        );
-        const reportsDocs = getDocs(reportsQuery);
-        reportsDocs.forEach((reportDoc) => {
+        const reportsQuery = query(reportsRef, orderBy("submissionDate", "desc"));
+        const reportsDocs = await getDocs(reportsQuery);
+
+        for (const reportDoc of reportsDocs.docs) {
           const data = reportDoc.data();
-          reportsData.push({ id: reportDoc.id, ...data });
-        });
-      });
+          reportsData.push({
+            id: reportDoc.id,
+            ...data,
+            adminUID: doc.id,
+            submissionDate: data.submissionDate ? data.submissionDate.toDate() : null,
+            replyDate: data.replyDate ? data.replyDate.toDate() : null,
+          });
+        }
+      }
       setReports(reportsData);
     } catch (error) {
       console.error("Error fetching reports:", error);
@@ -109,6 +96,7 @@ const AdminReportViewScreen = () => {
     setSelectedReport(null);
     setReplyModalVisible(false);
   };
+
   return (
     <View style={styles.container}>
       <ScrollView>
@@ -118,14 +106,14 @@ const AdminReportViewScreen = () => {
             <Text style={styles.reportDescription}>{report.description}</Text>
             <Text style={styles.reportSender}>Sender: {report.senderType}</Text>
             <Text style={styles.reportDate}>
-              Submitted on: {report.submissionDate.toDateString()}
+              Submitted on: {report.submissionDate ? report.submissionDate.toDateString() : "N/A"}
             </Text>
             {report.reply && (
               <View>
                 <Text style={styles.replyTitle}>Reply:</Text>
                 <Text style={styles.reply}>{report.reply}</Text>
                 <Text style={styles.replyDate}>
-                  Reply received on: {report.replyDate.toDateString()}
+                  Reply received on: {report.replyDate ? report.replyDate.toDateString() : "N/A"}
                 </Text>
               </View>
             )}
@@ -142,7 +130,7 @@ const AdminReportViewScreen = () => {
                   <Text style={styles.replyTitle}>Reply:</Text>
                   <Text style={styles.reply}>{selectedReport.reply}</Text>
                   <Text style={styles.replyDate}>
-                    Reply received on: {selectedReport.replyDate.toDateString()}
+                    Reply received on: {selectedReport.replyDate ? selectedReport.replyDate.toDateString() : "N/A"}
                   </Text>
                 </View>
               )}
