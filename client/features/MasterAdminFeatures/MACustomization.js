@@ -6,14 +6,17 @@ import {
   StyleSheet,
   Image,
   TextInput,
+  Alert,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { db, storage } from "../../../lib/firebase"; // Adjust this path as needed
+import { collection, addDoc } from "firebase/firestore";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 
 const BigCardCollage = ({ collageName, image }) => {
   const handleCardPress = () => {
-    // Navigate to the MasterAdminHomePage and pass collageName and image as route params
     navigation.navigate("Customization", { collageName, image });
   };
 
@@ -40,14 +43,8 @@ const BigCardCollage = ({ collageName, image }) => {
 
 export { BigCardCollage };
 
-// Inside MACustomization component
-
 const MACustomization = () => {
   const navigation = useNavigation();
-  //   console.log("Navigation before navigate:", navigation);
-
-  //   navigation.navigate("MasterAdminHomePage", { collageName, image });
-  //   console.log("Navigation after navigate:", navigation);
   const [collageName, setCollageName] = useState("");
   const [image, setImage] = useState(null);
   const [isDataChanged, setIsDataChanged] = useState(false);
@@ -70,17 +67,6 @@ const MACustomization = () => {
       console.error("Error loading collage data: ", error);
     }
   };
-  const saveCollageData = async () => {
-    try {
-      if (isDataChanged) {
-        await AsyncStorage.setItem("collageName", collageName);
-        await AsyncStorage.setItem("collageImage", image || "");
-        setIsDataChanged(false);
-      }
-    } catch (error) {
-      console.error("Error saving collage data: ", error);
-    }
-  };
 
   const pickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
@@ -92,38 +78,52 @@ const MACustomization = () => {
 
     if (!result.canceled && result.assets.length > 0) {
       setImage(result.assets[0].uri);
-      //   saveCollageData(collageName, result.assets[0].uri);
       setIsDataChanged(true);
     }
   };
 
   const handleCollageNameChange = (text) => {
     setCollageName(text);
-    // saveCollageData(text, image);
     setIsDataChanged(true);
   };
+
   const resetCollageData = async () => {
     try {
-      await AsyncStorage.removeItem("collageName");
-      await AsyncStorage.removeItem("collageImage");
-      setCollageName("Collage Name");
-      setImage(null);
-      setIsDataChanged(false);
+      let imageUrl = "";
+      if (image) {
+        const response = await fetch(image);
+        const blob = await response.blob();
+        const imageRef = ref(
+          storage,
+          `masteradmincustomization-images/${Date.now()}-${Math.random()
+            .toString(36)
+            .substr(2, 9)}`
+        );
+        const snapshot = await uploadBytes(imageRef, blob);
+        imageUrl = await getDownloadURL(snapshot.ref);
+      }
+      // Save the reset data to Firestore
+      await addDoc(collection(db, "masteradmincustomization"), {
+        collageName: collageName, // use the state variable
+        collageImage: imageUrl, // use the state variable
+        timestamp: new Date(),
+      });
+
+      Alert.alert("Success", "Collage data reset and saved to Firestore.");
+      setCollageName("")
+      setImage(null)
     } catch (error) {
       console.error("Error resetting collage data: ", error);
+      Alert.alert("Error", "Failed to reset collage data.");
     }
   };
-  const handleSaveChanges = () => {
-    navigation.navigate("MasterAdminHome", { collageName, image });
-    saveCollageData();
-  };
+
   return (
     <View style={styles.container}>
       <BigCardCollage collageName={collageName} image={image} />
       <TouchableOpacity onPress={pickImage} style={styles.button}>
         <Text style={styles.buttonText}>Upload Image</Text>
       </TouchableOpacity>
-      {/* {image && <Image source={{ uri: image }} style={styles.image} />} */}
       <Text style={styles.text}>Enter University Name</Text>
       <TextInput
         style={styles.input}
@@ -131,16 +131,14 @@ const MACustomization = () => {
         value={collageName}
         onChangeText={handleCollageNameChange}
       />
-      <TouchableOpacity
+      {/* <TouchableOpacity
         style={styles.button}
-        // onPress={() => saveCollageData(collageName, image)}
         onPress={handleSaveChanges}
       >
-        {/* <TouchableOpacity style={styles.button}> */}
         <Text style={styles.buttonText}>Save Changes</Text>
-      </TouchableOpacity>
+      </TouchableOpacity> */}
       <TouchableOpacity style={styles.button} onPress={resetCollageData}>
-        <Text style={styles.buttonText}>Reset</Text>
+        <Text style={styles.buttonText}>Save changes</Text>
       </TouchableOpacity>
     </View>
   );
@@ -176,15 +174,8 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     textAlign: "center",
   },
-  image: {
-    width: 300,
-    height: 300,
-    resizeMode: "cover",
-    borderRadius: 10,
-  },
   bigCard: {
     margin: 20,
-
     width: "90%",
     aspectRatio: 2,
     backgroundColor: "#fff",
@@ -214,4 +205,5 @@ const styles = StyleSheet.create({
     position: "absolute",
   },
 });
+
 export default MACustomization;

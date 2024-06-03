@@ -16,10 +16,13 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { BigCardCollage } from "../../features/MasterAdminFeatures/MACustomization";
+import { collection, getDocs, limit, orderBy, query } from "firebase/firestore";
+import { db } from "../../../lib/firebase";
 
 const MasterAdminHomePage = ({ route }) => {
   const navigation = useNavigation();
   const isFocused = useIsFocused();
+  const [data, setData] =useState([]) 
 
   const handleBackPress = () => {
     if (isFocused) {
@@ -41,6 +44,27 @@ const MasterAdminHomePage = ({ route }) => {
       return false;
     }
   };
+
+  console.log(data, "data")
+
+  const fetchLatestCollageData = async () => {
+    const collageDataRef = collection(db, "masteradmincustomization");
+    const q = query(collageDataRef, orderBy("timestamp", "desc"), limit(1));
+    const collageDataSnapshot = await getDocs(q);
+    const latestCollageData = collageDataSnapshot.docs.map(doc => doc.data());
+    setData(latestCollageData[0])
+    return latestCollageData[0];
+  };
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const data = await fetchLatestCollageData();
+      console.log(data); // Do something with the data
+    };
+  
+    fetchData();
+  }, []);
+  
 
   useEffect(() => {
     const backHandler = BackHandler.addEventListener(
@@ -93,8 +117,8 @@ const MasterAdminHomePage = ({ route }) => {
 
         <BigCardCollage
           onPress={() => handleCardPress("Customization")}
-          collageName={collageName}
-          image={image}
+          collageName={data?.collageName}
+          image={data?.collageImage}
         />
 
         <View style={styles.features}>
